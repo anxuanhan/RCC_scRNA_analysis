@@ -1,0 +1,86 @@
+###步骤14：提取某一cluster  并进行PCA分析
+data  #查看总的细胞数
+table(data@active.ident) #查看每个分组的细胞数
+# Generate the table
+active.ident.table <- table(data@active.ident)
+
+# Write it to a CSV file
+write.csv(active.ident.table, file = "./cellcluster_count.csv")
+
+subdata<-subset(x = data,idents=c("RCC"))  #提取的Cluster名
+subdata
+###返回步骤6：subdata的PCA分析
+
+##确定表达CCR中表达CCL2的细胞数量
+ccl2_expression = subdata@assays$RNA$counts["CCL2", ]
+num_cells_expressing_ccl2 = sum(ccl2_expression > 0)
+num_cells_expressing_ccl2
+
+##确定表达CCR中表达CC74的细胞数量
+cd74_expression = subdata@assays$RNA$counts["CD74", ]
+num_cells_expressing_cd74 = sum(cd74_expression > 0)
+num_cells_expressing_cd74
+
+##确定表达CCR中表达CA9的细胞数量
+ca9_expression = subdata@assays$RNA$counts["CA9", ]
+num_cells_expressing_ca9 = sum(ca9_expression > 0)
+num_cells_expressing_ca9
+
+##筛选同时表达CCL2和CD74的细胞
+coexpression_index = (subdata@assays$RNA$counts["CCL2", ] > 0 & subdata@assays$RNA$counts["CD74", ] > 0)
+coexpression_cells = subdata[, coexpression_index]
+coexpression_cells
+
+##筛选同时表达CCL2和CD74和CA9的细胞
+coexpression_index = (subdata@assays$RNA$counts["CCL2", ] > 0 & subdata@assays$RNA$counts["CD74", ] > 0&subdata@assays$RNA$counts["CA9", ] > 0)
+coexpression_cells = subdata[, coexpression_index]
+coexpression_cells
+
+# 获取CA9的表达数据
+ca9_expression = subdata@assays$RNA$counts["CA9", ]
+
+# 创建CCL2+CD74+CA9-细胞的子集
+neg_index = (ccl2_expression > 0 & cd74_expression > 0 & ca9_expression == 0)
+neg_cells = subdata[, neg_index]
+
+# 创建CCL2+CD74+CA9+细胞的子集
+pos_index = (ccl2_expression > 0 & cd74_expression > 0 & ca9_expression > 0)
+pos_cells = subdata[, pos_index]
+
+# 找出在neg_cells中表达，而在pos_cells中不表达的基因
+expressed_in_neg = rowSums(neg_cells@assays$RNA$counts > 0) > 0
+expressed_in_pos = rowSums(pos_cells@assays$RNA$counts > 0) > 0
+genes_expressed_only_in_neg = names(expressed_in_neg[expressed_in_neg & !expressed_in_pos])
+
+
+# 在合并前，设置对应的身份标识
+neg_cells$group <- "neg_cells"
+pos_cells$group <- "pos_cells"
+
+# 其次进行合并
+all_cells <- merge(neg_cells, pos_cells)
+
+# 创建新的身份标识列
+all_cells <- SetIdent(all_cells, value = "group")
+all_cells <- JoinLayers(all_cells)
+
+# 现在再次尝试查找差异表达的基因
+diff_exp_genes <- FindMarkers(all_cells, ident.1 = "neg_cells", ident.2 = "pos_cells")
+
+#我们关注的是平均表达量在 neg_cells 中高于 pos_cells 的基因，因此我们将 diff_exp_genes 按 avg_logFC 排序
+diff_exp_genes <- diff_exp_genes[order(diff_exp_genes$avg_log2FC, decreasing = TRUE), ]
+
+#选取前 50 个基因
+top_50_genes <- rownames(diff_exp_genes)[1:50]
+
+#创建热图
+DoHeatmap(all_cells, features = top_50_genes)
+
+# 汇总neg_cells中每个基因的表达量
+expression_sums = rowSums(neg_cells@assays$RNA$counts[genes_expressed_only_in_neg, ])
+
+# 降序排序
+sorted_genes = sort(expression_sums, decreasing = TRUE)
+
+# 保存到CSV文件
+write.csv(sorted_genes, file = "sorted_genes.csv")
