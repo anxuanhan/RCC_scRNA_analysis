@@ -1,25 +1,14 @@
-#《开讲啦 冠璋》网课分享代码，使用方法请关注B站 “南四环西路”，谢谢。
 library(dplyr)
 library(Seurat)
 library(patchwork)
 
-###步骤1：初始化
-
-#sc.data = read.delim(file.choose(),row.names = 1)   #单细胞测序数据读取 txt格式
-#metadata = read.delim(file.choose(),row.names = 1)  #单细胞其他信息读取 txt格式
-
-sc.data <- Read10X(data.dir = "./patient1/")   单细胞测序数据读取 10X
-
-data <- CreateSeuratObject(counts = sc.data, project = "pbmc3k", min.cells = 3, min.features = 200) 
-#data <- CreateSeuratObject(counts = data.data, project = "data3k", min.cells = 3, min.features = 200,meta.data = metadata)  #如读取了metadata运行这个代码，不需要运行上一个代码
-
 data <- load("./mergedata/mergedata_raw_tumorSeuratObject.Rdata")
-data <- tumor.aggregate
 
 ###步骤2：质控
 ###线粒体基因比例
 data[["percent.mt"]] <- PercentageFeatureSet(data, pattern = "^MT-") 
 #head(data@meta.data, 5)
+
 ###质控可视化
 VlnPlot(data, features = c("nFeature_RNA", "nCount_RNA","percent.mt"), ncol = 3)
 ##图1：nFeature_RNA表达数，nCount_RNA细胞数
