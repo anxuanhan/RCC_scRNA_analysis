@@ -1,0 +1,34 @@
+###质控
+###确定线粒体基因比例
+data[["percent.mt"]] <- PercentageFeatureSet(data, pattern = "^MT-") 
+#head(data@meta.data, 5)
+###质控可视化
+VlnPlot(data, features = c("nFeature_RNA", "nCount_RNA","percent.mt"), ncol = 3)
+##图1：nFeature_RNA表达数，nCount_RNA细胞数
+plot1 <- FeatureScatter(data, feature1 = "nCount_RNA", feature2 = "percent.mt")
+plot2 <- FeatureScatter(data, feature1 = "nCount_RNA", feature2 = "nFeature_RNA")
+plot1 + plot2
+##图2：nFeature_RNA表达数，nCount_RNA细胞数，percent.mt线粒体比例三者间的关系
+
+###根据图1和图2 去除表达小于200或大于7500或>20%线粒体基因
+data <- subset(data, subset = nFeature_RNA > 200 & nFeature_RNA <4500 & percent.mt < 10)
+
+###写出matrix_filtrate
+#write.table(data@assays$RNA@counts,file="GBM filtrate qupici.txt",quote=F,sep="\t")
+
+###步骤3：标准化
+data <- NormalizeData(data, normalization.method = "LogNormalize", scale.factor = 10000)
+#data[["RNA"]]@data
+
+###步骤4：寻找细胞间的高异质性基因
+data <- FindVariableFeatures(data, selection.method = "vst", nfeatures = 2000)  #top2000差异基因
+top10 <- head(VariableFeatures(data), 10)   #top10差异基因
+plot1 <- VariableFeaturePlot(data)
+plot2 <- LabelPoints(plot = plot1, points = top10, repel = TRUE)
+plot1 + plot2
+ggsave("myplot.pdf", plot1 + plot2, width = 10, height = 10)
+##图3：展示top2000差异基因中Top10高异质性基因
+
+###步骤5：Scaling the data
+all.genes <- rownames(data)
+data <- ScaleData(data, features = all.genes)
