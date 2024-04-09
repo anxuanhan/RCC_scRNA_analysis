@@ -153,7 +153,8 @@ DotPlot(data, features =  c("CCL2","CD74")) + RotatedAxis()
 
 ###步骤11：对分群进行标注
 new.cluster.ids <- c("Proliferating CD8+ T cell", "CD4+T cell", "NK cell", "Macrophage", "T cell", "RCC", 
-                     "6", "Dendritic cell", "B cell", "CD8+T cell", "Mast cell", "Treg cell", "T cell", "Plasma cell", "Endothelium","Neutrophil","16")
+                     "Healthy cell", "Dendritic cell", "B cell", "CD8+T cell", "Mast cell", "Treg cell", 
+                     "Plasma cell", "Endothelium","Neutrophil","16")
 names(new.cluster.ids) <- levels(data)
 data <- RenameIdents(data, new.cluster.ids)
 DimPlot(data, reduction = "umap", label = TRUE, pt.size = 1) + NoLegend()
